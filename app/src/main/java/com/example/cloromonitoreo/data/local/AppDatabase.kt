@@ -11,7 +11,7 @@ import com.example.cloromonitoreo.data.local.entity.MedicionEntity
 
 @Database(
     entities = [MedicionEntity::class, AccionCorrectivaEntity::class],
-    version = 1,
+    version = 2, // Subimos a 2 tras agregar imagenUri
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -28,7 +28,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "cloro_monitoreo_db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration() // Evita crashes si cambia el esquema
+                    .build()
                 INSTANCE = instance
                 instance
             }

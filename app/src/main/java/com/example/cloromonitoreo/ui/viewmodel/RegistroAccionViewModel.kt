@@ -1,5 +1,7 @@
 package com.example.cloromonitoreo.ui.viewmodel
 
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cloromonitoreo.data.local.entity.AccionCorrectivaEntity
@@ -22,6 +24,9 @@ data class RegistroAccionUiState(
     val descripcion: String = "",
     val responsable: String = "",
     val nuevoPpm: String = "",
+    val bitmapFoto: Bitmap? = null,
+    val uriFoto: Uri? = null,
+    val origenFoto: String = "",
     val errorDescripcion: String? = null,
     val errorResponsable: String? = null,
     val errorNuevoPpm: String? = null,
@@ -44,6 +49,9 @@ class RegistroAccionViewModel(
                 responsable = responsable,
                 descripcion = "",
                 nuevoPpm = "",
+                bitmapFoto = null,
+                uriFoto = null,
+                origenFoto = "",
                 errorDescripcion = null,
                 errorResponsable = null,
                 errorNuevoPpm = null,
@@ -62,6 +70,30 @@ class RegistroAccionViewModel(
 
     fun onNuevoPpmChange(ppm: String) {
         _uiState.update { it.copy(nuevoPpm = ppm, errorNuevoPpm = null) }
+    }
+
+    fun fotoDesdeCamara(bitmap: Bitmap?) {
+        _uiState.update {
+            it.copy(
+                bitmapFoto = bitmap,
+                uriFoto = null,
+                origenFoto = if (bitmap != null) "Cámara" else ""
+            )
+        }
+    }
+
+    fun fotoDesdeGaleria(uri: Uri?) {
+        _uiState.update {
+            it.copy(
+                uriFoto = uri,
+                bitmapFoto = null,
+                origenFoto = if (uri != null) "Galería" else ""
+            )
+        }
+    }
+
+    fun limpiarFoto() {
+        _uiState.update { it.copy(bitmapFoto = null, uriFoto = null, origenFoto = "") }
     }
 
     fun guardarAccionCorrectiva(onSuccess: () -> Unit) {
@@ -102,8 +134,7 @@ class RegistroAccionViewModel(
         }
 
         viewModelScope.launch {
-            val formatoFecha = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-            val ahora = formatoFecha.format(Date())
+            val ahora = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
 
             val accion = AccionCorrectivaEntity(
                 alertaId = "ALT-${_uiState.value.puntoId}",
@@ -111,13 +142,14 @@ class RegistroAccionViewModel(
                 descripcion = desc,
                 responsable = resp,
                 nuevoNivelPpm = ppmVal!!,
-                fechaHora = ahora
+                fechaHora = ahora,
+                imagenUri = _uiState.value.uriFoto?.toString(),
+                validadaPorSupervisor = false
             )
             repository.registrarAccionCorrectiva(accion)
 
-            // Registramos también la nueva medición restablecida
             val estado = calcularEstadoCloro(ppmVal)
-            val medicion = MedicionEntity(
+            val nuevaMedicion = MedicionEntity(
                 puntoId = _uiState.value.puntoId,
                 granja = _uiState.value.granja,
                 galpon = _uiState.value.galpon,
@@ -125,7 +157,7 @@ class RegistroAccionViewModel(
                 estado = estado.etiqueta,
                 fechaHora = ahora
             )
-            repository.registrarMedicion(medicion)
+            repository.registrarMedicion(nuevaMedicion)
 
             _uiState.update { it.copy(guardadoExitoso = true) }
             onSuccess()

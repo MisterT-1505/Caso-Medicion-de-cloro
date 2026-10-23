@@ -11,13 +11,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.cloromonitoreo.ui.viewmodel.MonitoreoViewModel
 
 @Composable
@@ -25,6 +31,9 @@ fun HistorialScreen(
     viewModel: MonitoreoViewModel
 ) {
     val mediciones by viewModel.mediciones.collectAsStateWithLifecycle()
+    val acciones by viewModel.accionesCorrectivas.collectAsStateWithLifecycle()
+
+    var verAcciones by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -32,29 +41,82 @@ fun HistorialScreen(
             .padding(16.dp)
     ) {
         Text(
-            text = "Historial de Mediciones (SQLite)",
+            text = "Historial en SQLite",
             style = MaterialTheme.typography.headlineSmall
         )
         Text(
-            text = "Registros almacenados localmente para consulta offline",
+            text = "Consulta local de registros y evidencias tomadas en terreno",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        FilterChip(
+            selected = verAcciones,
+            onClick = { verAcciones = !verAcciones },
+            label = { Text(if (verAcciones) "Viendo: Acciones Correctivas" else "Viendo: Mediciones") }
+        )
+
         Spacer(modifier = Modifier.height(12.dp))
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(mediciones, key = { it.id }) { reg ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(text = "${reg.granja} (${reg.galpon})", style = MaterialTheme.typography.titleMedium)
-                            Text(text = "${reg.nivelCloroPpm} ppm", style = MaterialTheme.typography.titleMedium)
+        if (verAcciones) {
+            if (acciones.isEmpty()) {
+                Text(
+                    text = "No hay acciones correctivas registradas aún.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(acciones, key = { it.id }) { accion ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "Intervención en Punto: ${accion.puntoId}",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(text = "Responsable: ${accion.responsable}")
+                                Text(text = "Descripción: ${accion.descripcion}")
+                                Text(text = "Nuevo cloro: ${accion.nuevoNivelPpm} ppm")
+                                Text(text = "Fecha: ${accion.fechaHora}", style = MaterialTheme.typography.bodySmall)
+
+                                if (!accion.imagenUri.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Evidencia fotográfica adjunta:",
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    AsyncImage(
+                                        model = accion.imagenUri,
+                                        contentDescription = "Foto de evidencia",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(240.dp), // altura suficiente para encuadrar
+                                        contentScale = ContentScale.Fit // <-- Muestra la foto entera sin recortar
+                                    )
+                                }
+                            }
                         }
-                        Text(text = "Punto: ${reg.puntoId} | Estado: ${reg.estado}")
-                        Text(text = "Fecha/Hora: ${reg.fechaHora}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(mediciones, key = { it.id }) { reg ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "${reg.granja} (${reg.galpon})", style = MaterialTheme.typography.titleMedium)
+                                Text(text = "${reg.nivelCloroPpm} ppm", style = MaterialTheme.typography.titleMedium)
+                            }
+                            Text(text = "Punto: ${reg.puntoId} | Estado: ${reg.estado}")
+                            Text(text = "Fecha/Hora: ${reg.fechaHora}", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }

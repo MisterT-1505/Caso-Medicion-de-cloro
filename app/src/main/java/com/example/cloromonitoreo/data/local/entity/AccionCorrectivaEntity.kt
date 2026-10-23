@@ -13,5 +13,6 @@ data class AccionCorrectivaEntity(
     val responsable: String,
     val nuevoNivelPpm: Double,
     val fechaHora: String,
+    val imagenUri: String? = null,
     val validadaPorSupervisor: Boolean = false
 )

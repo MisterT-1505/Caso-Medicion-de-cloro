@@ -2,8 +2,8 @@ package com.example.cloromonitoreo.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.cloromonitoreo.data.local.entity.AccionCorrectivaEntity
 import com.example.cloromonitoreo.data.local.entity.MedicionEntity
-import com.example.cloromonitoreo.data.model.CloroEstado
 import com.example.cloromonitoreo.data.model.calcularEstadoCloro
 import com.example.cloromonitoreo.data.repository.CloroRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +37,13 @@ class MonitoreoViewModel(
     }
 
     val mediciones: StateFlow<List<MedicionEntity>> = repository.todasLasMediciones
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val accionesCorrectivas: StateFlow<List<AccionCorrectivaEntity>> = repository.todasLasAcciones
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

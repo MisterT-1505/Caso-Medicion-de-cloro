@@ -1,6 +1,8 @@
 package com.example.cloromonitoreo.ui.screen
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,9 +28,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.cloromonitoreo.data.model.Alerta
 import com.example.cloromonitoreo.data.model.CloroEstado
 import com.example.cloromonitoreo.ui.viewmodel.AlertasViewModel
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun AlertasScreen(
     viewModel: AlertasViewModel,
@@ -43,71 +47,123 @@ fun AlertasScreen(
         alertas
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Alertas y Desviaciones",
-            style = MaterialTheme.typography.headlineSmall
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        if (maxWidth < 600.dp) {
+            // MODO COMPACTO / VERTICAL
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Alertas y Desviaciones",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
 
-        FilterChip(
-            selected = uiState.soloCriticas,
-            onClick = viewModel::toggleFiltroCriticas,
-            label = { Text("Mostrar únicamente críticas (<2 o >6 ppm)") }
-        )
+                FilterChip(
+                    selected = uiState.soloCriticas,
+                    onClick = viewModel::toggleFiltroCriticas,
+                    label = { Text("Mostrar únicamente críticas (<2 o >6 ppm)") }
+                )
 
-        Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-        if (alertasFiltradas.isEmpty()) {
-            Text(
-                text = "No hay desviaciones activas en los bebederos.",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 24.dp)
-            )
+                ListaTarjetasAlertas(
+                    alertas = alertasFiltradas,
+                    onResolverAlerta = onResolverAlerta
+                )
+            }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(alertasFiltradas, key = { it.id }) { alerta ->
-                    val colorFondo = if (alerta.nivelGravedad == CloroEstado.CRITICO) {
-                        Color(0xFFF8D7DA)
-                    } else {
-                        Color(0xFFFFF3CD)
-                    }
+            // MODO EXPANDIDO / HORIZONTAL (2 Columnas)
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Alertas y Desviaciones",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = "Panel de supervisión rápida de anomalías sanitarias en bebederos. Filtre por eventos críticos para priorizar:",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    FilterChip(
+                        selected = uiState.soloCriticas,
+                        onClick = viewModel::toggleFiltroCriticas,
+                        label = { Text("Mostrar únicamente críticas (<2 o >6 ppm)") }
+                    )
+                }
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = colorFondo)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${alerta.granja} - ${alerta.galpon}",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Red)
-                            }
-                            Text(text = "Punto: ${alerta.puntoId}")
-                            Text(text = "Desviación: ${alerta.tipoDesviacion.descripcion}")
+                Column(
+                    modifier = Modifier.weight(1.5f)
+                ) {
+                    ListaTarjetasAlertas(
+                        alertas = alertasFiltradas,
+                        onResolverAlerta = onResolverAlerta
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListaTarjetasAlertas(
+    alertas: List<Alerta>,
+    onResolverAlerta: (String) -> Unit
+) {
+    if (alertas.isEmpty()) {
+        Text(
+            text = "No hay desviaciones activas en los bebederos.",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 24.dp)
+        )
+    } else {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(alertas, key = { it.id }) { alerta ->
+                val colorFondo = if (alerta.nivelGravedad == CloroEstado.CRITICO) {
+                    Color(0xFFF8D7DA)
+                } else {
+                    Color(0xFFFFF3CD)
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = colorFondo)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                text = "Nivel detectado: ${alerta.nivelPpm} ppm",
-                                style = MaterialTheme.typography.bodyMedium
+                                text = "${alerta.granja} - ${alerta.galpon}",
+                                style = MaterialTheme.typography.titleMedium
                             )
-                            Text(text = "Hora: ${alerta.fechaHora}")
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Red)
+                        }
+                        Text(text = "Punto: ${alerta.puntoId}")
+                        Text(text = "Desviación: ${alerta.tipoDesviacion.descripcion}")
+                        Text(
+                            text = "Nivel detectado: ${alerta.nivelPpm} ppm",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(text = "Hora: ${alerta.fechaHora}")
 
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(
-                                onClick = { onResolverAlerta(alerta.puntoId) },
-                                modifier = Modifier.align(Alignment.End)
-                            ) {
-                                Text("Aplicar Corrección")
-                            }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { onResolverAlerta(alerta.puntoId) },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Aplicar Corrección")
                         }
                     }
                 }

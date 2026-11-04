@@ -251,7 +251,10 @@ fun AppNavigation(
                     )
                 }
                 composable(AppRoutes.HISTORIAL) {
-                    HistorialScreen(viewModel = monitoreoViewModel)
+                    HistorialScreen(
+                        viewModel = monitoreoViewModel,
+                        usuarioRol = rolUsuario
+                    )
                 }
             }
         }

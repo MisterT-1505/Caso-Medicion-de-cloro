@@ -1,9 +1,11 @@
 package com.example.cloromonitoreo.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.example.cloromonitoreo.data.local.entity.AccionCorrectivaEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -11,6 +13,12 @@ import kotlinx.coroutines.flow.Flow
 interface AccionCorrectivaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertar(accion: AccionCorrectivaEntity)
+
+    @Update
+    suspend fun actualizar(accion: AccionCorrectivaEntity)
+
+    @Delete
+    suspend fun eliminar(accion: AccionCorrectivaEntity)
 
     @Query("SELECT * FROM acciones_correctivas ORDER BY id DESC")
     fun obtenerTodas(): Flow<List<AccionCorrectivaEntity>>

@@ -20,7 +20,8 @@ import java.util.Locale
 data class MonitoreoUiState(
     val granjaSeleccionada: String = "Granja Melipilla",
     val granjasDisponibles: List<String> = listOf("Granja Melipilla", "Granja Paine", "Granja Talagante"),
-    val puntoSeleccionadoId: String? = null
+    val puntoSeleccionadoId: String? = null,
+    val periodoHistorial: String = "24 horas"
 )
 
 class MonitoreoViewModel(
@@ -58,6 +59,10 @@ class MonitoreoViewModel(
         _uiState.update { it.copy(puntoSeleccionadoId = puntoId) }
     }
 
+    fun seleccionarPeriodoHistorial(periodo: String) {
+        _uiState.update { it.copy(periodoHistorial = periodo) }
+    }
+
     fun registrarNuevaMedicion(puntoId: String, granja: String, galpon: String, nivelPpm: Double) {
         viewModelScope.launch {
             val estadoCalculado = calcularEstadoCloro(nivelPpm)
@@ -71,6 +76,20 @@ class MonitoreoViewModel(
                 fechaHora = formatoFecha.format(Date())
             )
             repository.registrarMedicion(nuevaMedicion)
+        }
+    }
+
+    fun validarAccionPorSupervisor(accion: AccionCorrectivaEntity) {
+        viewModelScope.launch {
+            repository.actualizarAccionCorrectiva(
+                accion.copy(validadaPorSupervisor = true)
+            )
+        }
+    }
+
+    fun eliminarAccionCorrectiva(accion: AccionCorrectivaEntity) {
+        viewModelScope.launch {
+            repository.eliminarAccionCorrectiva(accion)
         }
     }
 }

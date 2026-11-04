@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -44,7 +45,6 @@ fun PuntosMedicionScreen(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         if (maxWidth < 600.dp) {
-            // MODO COMPACTO / VERTICAL
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -54,8 +54,7 @@ fun PuntosMedicionScreen(
                     text = "Puntos de Medición en Línea",
                     style = MaterialTheme.typography.headlineSmall
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-
+                Spacer(modifier = Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(uiState.granjasDisponibles) { granja ->
                         FilterChip(
@@ -65,9 +64,23 @@ fun PuntosMedicionScreen(
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { viewModel.sincronizarDesdeApi() },
+                    enabled = !uiState.sincronizandoApi,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (uiState.sincronizandoApi) "Sincronizando API..." else "Sincronizar lectura de sensores")
+                }
+                uiState.mensajeApi?.let { msg ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 ListaTarjetasPuntos(
                     mediciones = filtradas,
                     onSeleccionarPunto = { puntoId ->
@@ -77,14 +90,12 @@ fun PuntosMedicionScreen(
                 )
             }
         } else {
-            // MODO EXPANDIDO / HORIZONTAL (2 Columnas con scroll independiente)
             Row(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Columna izquierda: con verticalScroll para permitir bajar y ver todas las granjas
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -101,7 +112,6 @@ fun PuntosMedicionScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         uiState.granjasDisponibles.forEach { granja ->
                             FilterChip(
@@ -112,9 +122,21 @@ fun PuntosMedicionScreen(
                             )
                         }
                     }
+                    Button(
+                        onClick = { viewModel.sincronizarDesdeApi() },
+                        enabled = !uiState.sincronizandoApi,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (uiState.sincronizandoApi) "Sincronizando API..." else "Sincronizar sensores (API)")
+                    }
+                    uiState.mensajeApi?.let { msg ->
+                        Text(
+                            text = msg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
-
-                // Columna derecha: listado deslizable de bebederos
                 Column(
                     modifier = Modifier
                         .weight(1.4f)
@@ -167,14 +189,12 @@ private fun ListaTarjetasPuntos(
                             color = textoColor
                         )
                     }
-
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Estado: ${item.estado} | Hora: ${item.fechaHora}",
                         style = MaterialTheme.typography.bodySmall,
                         color = textoColor
                     )
-
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = { onSeleccionarPunto(item.puntoId) },

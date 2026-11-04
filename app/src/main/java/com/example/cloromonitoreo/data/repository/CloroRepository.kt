@@ -1,5 +1,6 @@
 package com.example.cloromonitoreo.data.repository
 
+import com.example.cloromonitoreo.data.local.NotificacionHelper
 import com.example.cloromonitoreo.data.local.dao.AccionCorrectivaDao
 import com.example.cloromonitoreo.data.local.dao.MedicionDao
 import com.example.cloromonitoreo.data.local.entity.AccionCorrectivaEntity
@@ -9,7 +10,8 @@ import kotlinx.coroutines.flow.Flow
 class CloroRepository(
     private val medicionDao: MedicionDao,
     private val accionCorrectivaDao: AccionCorrectivaDao,
-    private val apiService: CloroApiService = CloroApiService()
+    private val apiService: CloroApiService = CloroApiService(),
+    private val notificacionHelper: NotificacionHelper? = null
 ) {
     val todasLasMediciones: Flow<List<MedicionEntity>> = medicionDao.obtenerTodas()
     val todasLasAcciones: Flow<List<AccionCorrectivaEntity>> = accionCorrectivaDao.obtenerTodas()
@@ -19,12 +21,22 @@ class CloroRepository(
 
     suspend fun registrarMedicion(medicion: MedicionEntity) {
         medicionDao.insertar(medicion)
+        if (medicion.nivelCloroPpm < 2.00 || medicion.nivelCloroPpm > 6.00) {
+            notificacionHelper?.enviarAlertaCritica(medicion.puntoId, medicion.granja, medicion.galpon, medicion.nivelCloroPpm)
+        }
     }
 
     suspend fun sincronizarMedicionesDesdeApi(granja: String): Int {
         val nuevasMediciones = apiService.obtenerMedicionesEnLinea(granja)
         medicionDao.insertarTodas(nuevasMediciones)
-        return nuevasMediciones.count { it.nivelCloroPpm < 2.00 || it.nivelCloroPpm > 6.00 }
+        var alertasCriticas = 0
+        nuevasMediciones.forEach { med ->
+            if (med.nivelCloroPpm < 2.00 || med.nivelCloroPpm > 6.00) {
+                alertasCriticas++
+                notificacionHelper?.enviarAlertaCritica(med.puntoId, med.granja, med.galpon, med.nivelCloroPpm)
+            }
+        }
+        return alertasCriticas
     }
 
     suspend fun registrarAccionCorrectiva(accion: AccionCorrectivaEntity) {

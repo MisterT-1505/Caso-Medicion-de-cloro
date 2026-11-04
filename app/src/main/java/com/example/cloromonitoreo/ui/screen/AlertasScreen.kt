@@ -1,6 +1,8 @@
 package com.example.cloromonitoreo.ui.screen
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -26,11 +28,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.cloromonitoreo.data.model.Alerta
 import com.example.cloromonitoreo.data.model.CloroEstado
 import com.example.cloromonitoreo.ui.viewmodel.AlertasViewModel
+import java.util.Locale
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
@@ -47,9 +51,13 @@ fun AlertasScreen(
         alertas
     }
 
+    val escalaTitulo by animateFloatAsState(
+        targetValue = if (uiState.soloCriticas) 1.04f else 1f,
+        label = "escalaTituloAlertas"
+    )
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         if (maxWidth < 600.dp) {
-            // MODO COMPACTO / VERTICAL
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -57,25 +65,25 @@ fun AlertasScreen(
             ) {
                 Text(
                     text = "Alertas y Desviaciones",
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = escalaTitulo
+                        scaleY = escalaTitulo
+                    },
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-
                 FilterChip(
                     selected = uiState.soloCriticas,
                     onClick = viewModel::toggleFiltroCriticas,
-                    label = { Text("Mostrar únicamente críticas (<2 o >6 ppm)") }
+                    label = { Text("Mostrar únicamente críticas (<2.00 o >6.00 ppm)") }
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 ListaTarjetasAlertas(
                     alertas = alertasFiltradas,
                     onResolverAlerta = onResolverAlerta
                 )
             }
         } else {
-            // MODO EXPANDIDO / HORIZONTAL (2 Columnas)
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -88,6 +96,10 @@ fun AlertasScreen(
                 ) {
                     Text(
                         text = "Alertas y Desviaciones",
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = escalaTitulo
+                            scaleY = escalaTitulo
+                        },
                         style = MaterialTheme.typography.headlineSmall
                     )
                     Text(
@@ -97,10 +109,9 @@ fun AlertasScreen(
                     FilterChip(
                         selected = uiState.soloCriticas,
                         onClick = viewModel::toggleFiltroCriticas,
-                        label = { Text("Mostrar únicamente críticas (<2 o >6 ppm)") }
+                        label = { Text("Mostrar únicamente críticas (<2.00 o >6.00 ppm)") }
                     )
                 }
-
                 Column(
                     modifier = Modifier.weight(1.5f)
                 ) {
@@ -128,11 +139,14 @@ private fun ListaTarjetasAlertas(
     } else {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(alertas, key = { it.id }) { alerta ->
-                val colorFondo = if (alerta.nivelGravedad == CloroEstado.CRITICO) {
-                    Color(0xFFF8D7DA)
-                } else {
-                    Color(0xFFFFF3CD)
-                }
+                val colorFondo by animateColorAsState(
+                    targetValue = if (alerta.nivelGravedad == CloroEstado.CRITICO) {
+                        Color(0xFFF8D7DA)
+                    } else {
+                        Color(0xFFFFF3CD)
+                    },
+                    label = "colorTarjetaAlerta"
+                )
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -153,11 +167,10 @@ private fun ListaTarjetasAlertas(
                         Text(text = "Punto: ${alerta.puntoId}")
                         Text(text = "Desviación: ${alerta.tipoDesviacion.descripcion}")
                         Text(
-                            text = "Nivel detectado: ${alerta.nivelPpm} ppm",
+                            text = "Nivel detectado: ${String.format(Locale.US, "%.2f", alerta.nivelPpm)} ppm",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(text = "Hora: ${alerta.fechaHora}")
-
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = { onResolverAlerta(alerta.puntoId) },

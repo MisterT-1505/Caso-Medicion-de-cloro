@@ -21,7 +21,9 @@ data class MonitoreoUiState(
     val granjaSeleccionada: String = "Granja Melipilla",
     val granjasDisponibles: List<String> = listOf("Granja Melipilla", "Granja Paine", "Granja Talagante"),
     val puntoSeleccionadoId: String? = null,
-    val periodoHistorial: String = "24 horas"
+    val periodoHistorial: String = "24 horas",
+    val sincronizandoApi: Boolean = false,
+    val mensajeApi: String? = null
 )
 
 class MonitoreoViewModel(
@@ -52,7 +54,7 @@ class MonitoreoViewModel(
         )
 
     fun seleccionarGranja(granja: String) {
-        _uiState.update { it.copy(granjaSeleccionada = granja) }
+        _uiState.update { it.copy(granjaSeleccionada = granja, mensajeApi = null) }
     }
 
     fun seleccionarPunto(puntoId: String) {
@@ -61,6 +63,20 @@ class MonitoreoViewModel(
 
     fun seleccionarPeriodoHistorial(periodo: String) {
         _uiState.update { it.copy(periodoHistorial = periodo) }
+    }
+
+    fun sincronizarDesdeApi() {
+        val granjaActual = _uiState.value.granjaSeleccionada
+        viewModelScope.launch {
+            _uiState.update { it.copy(sincronizandoApi = true, mensajeApi = "Consultando sensores...") }
+            val criticas = repository.sincronizarMedicionesDesdeApi(granjaActual)
+            val resumen = if (criticas > 0) {
+                "API sincronizada: $criticas alerta(s) detectada(s)"
+            } else {
+                "API sincronizada: Puntos actualizados con normalidad"
+            }
+            _uiState.update { it.copy(sincronizandoApi = false, mensajeApi = resumen) }
+        }
     }
 
     fun registrarNuevaMedicion(puntoId: String, granja: String, galpon: String, nivelPpm: Double) {
